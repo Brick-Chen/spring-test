@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/hotSearch?characterEncoding=UTF-8
+    url: jdbc:mysql://localhost:3306/rsSystem?characterEncoding=UTF-8
     username: root
-    password: pass
+    password: test
     driver-class-name: com.mysql.jdbc.Driver
   jpa:
     hibernate:
