@@ -1,5 +1,6 @@
 package com.thoughtworks.rslist.service;
 
+import com.thoughtworks.rslist.domain.RsEvent;
 import com.thoughtworks.rslist.domain.Trade;
 import com.thoughtworks.rslist.domain.Vote;
 import com.thoughtworks.rslist.dto.RsEventDto;
@@ -13,8 +14,10 @@ import com.thoughtworks.rslist.repository.UserRepository;
 import com.thoughtworks.rslist.repository.VoteRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class RsService {
@@ -93,5 +96,52 @@ public class RsService {
       tradeRepository.save(tradeDto);
     }
 
+  }
+
+  public List<RsEvent> getAllRsEventInOrder() {
+    List<RsEventDto> allRsEvents = rsEventRepository.findAll();
+    List<RsEventDto> rsEventBought = allRsEvents.stream()
+            .filter(o->o.getTradeDto() != null).collect(Collectors.toList());
+
+    List<Integer> boughtRanks = rsEventBought.stream()
+            .mapToInt(o->o.getTradeDto().getRank()).boxed().collect(Collectors.toList());
+
+    List<RsEventDto> rsEventNotBought = allRsEvents.stream()
+            .filter(o->o.getTradeDto() == null).collect(Collectors.toList());
+
+    if (rsEventBought.size() == 0) {
+      return rsEventNotBought.stream()
+              .map(RsService::mapFromRsEventDtoToRsEvent).sorted((o1, o2) -> o2.getVoteNum() - o1.getVoteNum())
+              .collect(Collectors.toList());
+    }
+
+    RsEvent[] events = new RsEvent[allRsEvents.size()];
+
+    for (int i = 0; i < rsEventBought.size(); ++i) {
+      int pos = rsEventBought.get(i).getTradeDto().getRank();
+      events[pos - 1] = mapFromRsEventDtoToRsEvent(rsEventBought.get(i));
+    }
+
+    int start = 0;
+    for(int i = 0; i < events.length && start < rsEventNotBought.size(); ++i) {
+      if (events[i] == null ) {
+        events[i] = mapFromRsEventDtoToRsEvent(rsEventNotBought.get(start));
+        ++start;
+      }
+    }
+
+    return Arrays.asList(events);
+  }
+
+  private static RsEvent mapFromRsEventDtoToRsEvent(RsEventDto rsEventDto) {
+    if (rsEventDto == null) {
+      return null;
+    }
+
+    return RsEvent.builder()
+            .eventName(rsEventDto.getEventName())
+            .keyword(rsEventDto.getKeyword())
+            .voteNum(rsEventDto.getVoteNum())
+            .build();
   }
 }
